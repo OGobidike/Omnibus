@@ -1,108 +1,89 @@
+# 🤖 Omnibus
 
-# 🤖 **Omnibus: The Humble, Happy, and Helpful AI Chatbot**
+Omnibus is a polite storytelling robot you talk with in your terminal. He tells history, works sums and spins tall tales, and he has one firm rule: **a tall tale is never passed off as history.**
 
-Welcome to **Omnibus**, a groundbreaking chatbot with a personality as vibrant as its capabilities! Born from a blend of curiosity and innovation, Omnibus is not just any AI chatbot—it’s a storytelling companion, a mathematical whiz, and a historian with a penchant for polite and humorous conversation. Built using state-of-the-art AI technologies, Omnibus showcases the intersection of technical expertise and creative problem-solving.
+I made him for two kinds of people:
 
----
+- **Anyone who likes a good story.** He explains things plainly, with manners and a little comedy, and he tells you which parts of a story are true.
+- **Anyone learning to build with Claude.** This repo is a small, complete example you can read in one sitting: about 300 lines of Python, with tests that run without an API key.
 
-## 🚀 **Features**
+## ✨ What he does today
 
-1. **Dynamic Personality**:
-   - Omnibus is designed with a rich backstory, making interactions fun and engaging.
-   - Always polite, confident, and equipped with perfect manners.
-   - Omnibus weaves historical, mathematical, and logical insights into its responses.
+| | |
+|---|---|
+| **Remembers the conversation** | Every request carries everything said so far, so he can follow a thread. |
+| **Speaks as he writes** | Replies stream into the terminal piece by piece. |
+| **Has a character you can read** | His whole personality is one prose file, [`persona.md`](src/omnibus/persona.md). Change the file and you change him. |
+| **Keeps tales and history apart** | He says which parts of a story are record and which he made up. This is a rule in his character file. I haven't measured how well he keeps it yet; that test is next on my list. |
+| **Shows what each reply cost** | A line after every reply gives the tokens used and an estimate in dollars. |
+| **Fails politely** | A declined request, a dropped connection or a missing key each get a plain message, and the conversation carries on where it can. |
 
-2. **Core Competencies**:
-   - **Storytelling**: Brings history and fiction to life with compelling narratives.
-   - **Mathematics**: Handles calculations and complex reasoning with ease.
-   - **Logic and Reasoning**: Breaks down intricate concepts into digestible insights.
+## 🚀 Try it
 
-3. **Purpose-Driven**:
-   - Built to inspire and educate during "dark times" when understanding simple truths is essential.
-   - Acts as a co-pilot for "The Wanderer," helping weave tales and solve mysteries.
+You need [uv](https://docs.astral.sh/uv/) and a [Claude API key](https://platform.claude.com/settings/keys).
 
----
+```bash
+git clone https://github.com/OGobidike/Omnibus.git
+cd Omnibus
+uv sync
+cp .env.example .env
+```
 
-## 🧑‍🔬 **Technical Overview**
+Paste your key into `.env`, then:
 
-Omnibus leverages cutting-edge **OpenAI GPT-3.5 Turbo** technology, which enables robust and nuanced conversations. The chatbot was developed with Python and integrates various data science concepts and techniques:
+```bash
+uv run omnibus
+```
 
-### 📚 **Data Science Techniques Used**
+Type your words and press Enter. `/quit` ends the sitting.
 
-1. **Natural Language Processing (NLP)**:
-   - Built on the GPT model, Omnibus processes and generates human-like text.
-   - Custom prompt engineering ensures a tailored personality and specific conversational style.
+**Each reply costs real money**, charged to your key. By default Omnibus is played by Claude Fable 5.2, Anthropic's most capable model. To meet him for a fraction of the price:
 
-2. **Sentiment and Tone Modulation**:
-   - By adjusting the `temperature` parameter, Omnibus achieves consistent, contextually appropriate responses.
+```bash
+uv run omnibus --model claude-haiku-5-5
+```
 
-3. **Prompt Design**:
-   - System prompts were carefully crafted to give Omnibus its unique character.
-   - This approach demonstrates expertise in **linguistic modeling** and **context management**.
+`uv run omnibus --help` lists the other settings.
 
-4. **Scalable API Integration**:
-   - OpenAI’s ChatCompletion API ensures seamless interactions.
-   - Handles backoff and retry logic for uninterrupted performance.
+## ✅ Tested
 
-5. **Debugging and Fine-Tuning**:
-   - Extensive testing was conducted to optimize the chatbot’s accuracy and conversational flow.
+- ✅ **42 tests**, run by CI on every push and pull request
+- ✅ **No test needs a key, touches the network or costs anything.** A fixture fails any test that tries to connect.
+- ✅ **Two kinds of stand-in.** Most tests replace the Anthropic SDK with a simple fake. The rest keep the real SDK and replace only the network under it, so they check exactly what goes over the wire.
+- ✅ `ruff check` and `ruff format --check` pass
 
-6. **Environment Management**:
-   - Securely manages API keys with `dotenv`, demonstrating a commitment to data security and scalability.
+Run them yourself:
 
-7. **Deployment Readiness**:
-   - The lightweight design ensures adaptability for various platforms, from web apps to mobile integration.
+```bash
+uv run pytest
+```
 
----
+## 🧱 How it is built
 
-## 🛠️ **How It Works**
+| File | What it holds |
+|---|---|
+| [`src/omnibus/persona.md`](src/omnibus/persona.md) | His character, as prose |
+| [`src/omnibus/companion.py`](src/omnibus/companion.py) | The conversation: what is sent to Claude, and what is remembered |
+| [`src/omnibus/cli.py`](src/omnibus/cli.py) | The terminal |
+| [`src/omnibus/pricing.py`](src/omnibus/pricing.py) | The cost line |
+| [`tests/`](tests) | The tests and the stand-ins for Claude |
 
-Omnibus processes user inputs through a meticulously crafted pipeline:
-1. **User Input**: The user provides a prompt (e.g., "Tell me a story about ancient Rome").
-2. **System Context**: Omnibus uses a predefined prompt that shapes its personality and capabilities.
-3. **AI Response**: The OpenAI GPT-3.5 Turbo model generates a response.
-4. **Delivery**: The reply is returned with confidence, ensuring user satisfaction.
----
+A few choices worth knowing about:
 
-## 📈 **Project Highlights**
+- **Claude's API keeps no memory**, so Omnibus keeps the conversation himself and sends all of it with every request.
+- **The character comes first and never changes.** An unchanged start of a request can be re-read from Claude's prompt cache at a fraction of the price, so the request marks it for caching.
+- **Claude's thinking goes back exactly as it came.** The API expects each thinking block returned unchanged on the next request, so the history stores whole replies, not only their text.
+- **There is no `temperature` setting.** Current Claude models reject it. The dial that remains is `--effort`, which sets how hard the model works on a reply.
+- **A declined request is not the end.** Claude's safety checks can decline a request. Omnibus asks the API to try a second model when that happens, and if the request is still declined, he leaves it out of the conversation and carries on.
 
-1. **Data-Driven Decision-Making**:
-   - Integrated with robust statistical and mathematical reasoning for problem-solving.
+## 🗺️ What comes next
 
-2. **AI Personality Engineering**:
-   - Crafted a conversational style that showcases not just technical acumen but also creative flair.
-
-3. **Practical Applications**:
-   - **Customer Support**: Omnibus could easily be adapted for customer service roles.
-   - **Education**: Acts as a tutor for history, mathematics, and logic.
-
----
-
-## 💡 **Why This Project Stands Out**
-
-- **Blends Creativity with Technical Mastery**: Demonstrates my ability to combine abstract thinking with hands-on technical execution.
-- **Data Science Expertise**: Highlights advanced NLP techniques and real-world API integration.
-- **Problem-Solving Focus**: Showcases my ability to use AI to solve practical and engaging problems.
-
----
-
-## 👨‍💻 **Future Enhancements**
-
-Here’s what’s next for Omnibus:
-- **Sentiment Analysis**: Adjust responses based on user sentiment.
-- **Knowledge Base Expansion**: Integrate external datasets to enhance storytelling and reasoning capabilities.
-- **Deployment**: Package Omnibus as a web or mobile app for broader accessibility.
+- **Sources he can show.** History answers will carry links to where the facts came from.
+- **A calculator he must use.** Sums will be computed, never guessed.
+- **A memory between sittings**, kept in plain files you can read and delete.
+- **A test sheet** that measures his manners and his honesty, with every number rebuilt by one command.
+- **A seat in [the CBC](https://github.com/OGobidike/The-CBC-ChatBotCongress)**, my Chatbot Congress, the debating chamber I am rebuilding next.
 
 ---
 
-## 🎯 **What Employers Should Know**
-
-This project reflects:
-1. **Creativity**: Crafting a unique AI personality and backstory.
-2. **Technical Proficiency**: Applying data science concepts and tools effectively.
-3. **Problem-Solving**: Using AI to create meaningful and engaging experiences.
-4. **Scalability**: The chatbot’s architecture is designed for real-world deployment.
-
-
-
-Feel free to tweak this as needed to reflect any additional features or your personal branding!
+Omnibus began in 2024 as a 38-line script. That version is kept at the [`v2024` tag](https://github.com/OGobidike/Omnibus/tree/v2024).
